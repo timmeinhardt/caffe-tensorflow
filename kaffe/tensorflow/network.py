@@ -196,7 +196,7 @@ class Network(object):
 
     @layer
     def prelu(self, input, name):
-        shape = input.get_shape()[1:]
+        shape = input.get_shape()[-1]
 
         input_scope = ""
         if hasattr(input, 'scope'):
