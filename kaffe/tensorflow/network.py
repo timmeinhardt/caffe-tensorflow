@@ -274,28 +274,41 @@ class Network(object):
         return tf.nn.softmax(input, name)
 
     @layer
-    def batch_normalization(self, input, name, scale_offset=True, relu=False):
+    def batch_normalization(self, input, name, is_train, scale_offset=True, relu=False):
         # NOTE: Currently, only inference is supported
         with tf.variable_scope(name) as scope:
-            shape = [input.get_shape()[-1]]
-            if scale_offset:
-                scale = self.make_var('scale', shape=shape)
-                offset = self.make_var('offset', shape=shape)
+            if is_train:
+                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=True, reuse=None, scope=scope)
             else:
-                scale, offset = (None, None)
-            output = tf.nn.batch_normalization(
-                input,
-                mean=self.make_var('mean', shape=shape),
-                variance=self.make_var('variance', shape=shape),
-                offset=offset,
-                scale=scale,
-                # TODO: This is the default Caffe batch norm eps
-                # Get the actual eps from parameters
-                variance_epsilon=1e-5,
-                name=name)
-            if relu:
-                output = tf.nn.relu(output)
-            return output
+                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=False, reuse=True, scope=scope)
+
+            return batch_norm
+
+            #shape = [input.get_shape()[-1]]
+
+            #if scale_offset:
+            #    scale = self.make_var('scale', shape=shape)
+            #    offset = self.make_var('offset', shape=shape)
+            #else:
+            #    scale, offset = (None, None)
+
+            #mean = self.make_var('mean', shape=shape)
+            #variance = self.make_var('variance', shape=shape)
+
+            #output = tf.nn.batch_normalization(
+            #    input,
+            #    mean=self.make_var('mean', shape=shape),
+            #    variance=self.make_var('variance', shape=shape),
+            #    offset=offset,
+            #    scale=scale,
+            #    # TODO: This is the default Caffe batch norm eps
+            #    # Get the actual eps from parameters
+            #    variance_epsilon=1e-5,
+            #    name=name)
+            #if relu:
+            #    output = tf.nn.relu(output)
+
+            #return output
 
     @layer
     def dropout(self, input, keep_prob, name):
