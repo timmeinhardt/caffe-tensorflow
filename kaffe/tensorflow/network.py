@@ -93,9 +93,9 @@ class Network(object):
         ident = sum(t.startswith(prefix) for t, _ in self.layers.items()) + 1
         return '%s_%d' % (prefix, ident)
 
-    def make_var(self, name, shape):
+    def make_var(self, name, shape, initializer=None):
         '''Creates a new TensorFlow variable.'''
-        return tf.get_variable(name, shape, trainable=self.trainable)
+        return tf.get_variable(name, shape, trainable=self.trainable, initializer=initializer)
 
     def validate_padding(self, padding):
         '''Verifies that the padding is one of the supported ones.'''
@@ -113,7 +113,9 @@ class Network(object):
              relu=True,
              padding=DEFAULT_PADDING,
              group=1,
-             biased=True):
+             biased=True,
+             weight_initializer=None,
+             bias_initializer=None):
         # Verify that the padding is acceptable
         self.validate_padding(padding)
         # Get the number of channels in the input
@@ -124,7 +126,7 @@ class Network(object):
         # Convolution for a given input and kernel
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
-            kernel = self.make_var('weights', shape=[k_h, k_w, c_i / group, c_o])
+            kernel = self.make_var('weights', shape=[k_h, k_w, c_i / group, c_o], initializer=weight_initializer)
             if group == 1:
                 # This is the common-case. Convolve the input without any further complications.
                 output = convolve(input, kernel)
@@ -137,7 +139,7 @@ class Network(object):
                 output = tf.concat(3, output_groups)
             # Add the biases
             if biased:
-                biases = self.make_var('biases', [c_o])
+                biases = self.make_var('biases', [c_o], initializer=bias_initializer)
                 output = tf.nn.bias_add(output, biases)
             if relu:
                 # ReLU non-linearity
@@ -278,9 +280,9 @@ class Network(object):
         # NOTE: Currently, only inference is supported
         with tf.variable_scope(name) as scope:
             if is_train:
-                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=True, reuse=None, scope=scope)
+                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=True, reuse=None, scope=name)
             else:
-                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=False, reuse=True, scope=scope)
+                batch_norm = tf.contrib.layers.batch_norm(input, activation_fn=tf.nn.relu, is_training=False, reuse=True, scope=name)
 
             return batch_norm
 
